@@ -1,0 +1,12 @@
+[
+  verbose: false,
+  private: false,
+  skip: true,
+  router: "lib/clearing_ledger_web/router.ex",
+  exit: "low",
+  # Config.CSP and Config.HTTPS are browser concerns. This service speaks JSON
+  # to other services behind an edge that terminates TLS; a content security
+  # policy on a JSON body protects nothing.
+  ignore: ["Config.CSP", "Config.HTTPS"],
+  ignore_files: []
+]

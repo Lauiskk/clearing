@@ -1,0 +1,23 @@
+# Elixir / Erlang
+/services/*/_build/
+/services/*/deps/
+/services/*/.elixir_ls/
+/services/*/*.ez
+erl_crash.dump
+*.beam
+
+# Go
+/bin/
+/dist/
+*.out
+
+# Local configuration. Every variable is optional and documented in
+# .env.example; this file is where machine-specific values live.
+.env
+.env.local
+
+# Editors and OS
+.DS_Store
+*.swp
+.idea/
+.vscode/

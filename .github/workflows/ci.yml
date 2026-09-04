@@ -1,0 +1,110 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A superseded run is wasted minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Pinned to what the development machine has installed, so `mix test` locally
+  # and `mix test` here run on the same compiler. Declaring `~> 1.17` and then
+  # building CI on 1.18 lets the two disagree about what compiles.
+  ELIXIR_VERSION: '1.17.3'
+  OTP_VERSION: '27.2'
+
+jobs:
+  ledger:
+    name: elixir — ledger
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+
+    defaults:
+      run:
+        working-directory: services/ledger
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            services/ledger/deps
+            services/ledger/_build
+          key: ledger-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('services/ledger/mix.lock') }}
+
+      - name: deps
+        run: mix deps.get
+
+      - name: format
+        run: mix format --check-formatted
+
+      - name: compile
+        run: mix compile --warnings-as-errors
+
+      - name: credo
+        run: mix credo --strict
+
+      - name: test
+        run: mix test
+
+  security:
+    name: security — advisory
+    runs-on: ubuntu-latest
+    # Advisory on purpose. A CVE published overnight against a transitive
+    # dependency should not turn every unrelated pull request red; it should
+    # show up here, in its own job, as something to go and look at.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: deps
+        run: mix deps.get
+        working-directory: services/ledger
+
+      - name: sobelow
+        run: mix sobelow --config
+        working-directory: services/ledger
+
+      - name: dependency advisories
+        run: mix deps.audit
+        working-directory: services/ledger
+
+      - name: retired packages
+        run: mix hex.audit
+        working-directory: services/ledger
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

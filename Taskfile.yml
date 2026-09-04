@@ -1,0 +1,83 @@
+# The single entry point. CI runs these same commands, so the gate you get
+# locally and the gate that blocks a merge cannot drift apart.
+version: '3'
+
+dotenv: ['.env']
+
+vars:
+  LEDGER: services/ledger
+
+tasks:
+  default:
+    desc: List the available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  check:
+    desc: Everything CI runs. Green here means green there.
+    cmds:
+      - task: fmt:check
+      - task: lint
+      - task: test
+
+  setup:
+    desc: Fetch dependencies and create the development databases
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix deps.get
+      - mix ecto.create
+      - mix ecto.migrate
+
+  fmt:
+    desc: Format every source file
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix format
+
+  fmt:check:
+    desc: Fail if anything is unformatted
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix format --check-formatted
+
+  lint:
+    desc: Compile with warnings as errors, then credo and sobelow
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix compile --force --warnings-as-errors
+      - mix credo --strict
+      - mix sobelow --config
+
+  test:
+    desc: The full suite against a real Postgres
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix test {{.CLI_ARGS}}
+
+  audit:
+    desc: Dependency advisories and retired packages
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix deps.audit
+      - mix hex.audit
+
+  migrate:
+    desc: Run pending migrations
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix ecto.migrate
+
+  reset:
+    desc: Drop and rebuild the development database
+    dir: '{{.LEDGER}}'
+    cmds:
+      - mix ecto.reset
+
+  ledger:
+    desc: Run the ledger service in the foreground
+    dir: '{{.LEDGER}}'
+    env:
+      PORT: '{{.LEDGER_PORT | default "4010"}}'
+    cmds:
+      - mix phx.server
