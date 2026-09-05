@@ -12,7 +12,13 @@ config :clearing_ledger, Clearing.Ledger.Repo,
 
 config :clearing_ledger, Clearing.LedgerWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base: "d3MskZwO5r25JIEBdcY2veI5pKW0QPYFZm6WE2VB3Oto1vCx58VrRgI61bXHr+2d",
+  # Deliberately low-entropy and self-describing. Phoenix generates a random
+  # 64-byte value here, which a secret scanner cannot tell apart from a real
+  # leak -- so every run reports a finding, and a scanner that always cries
+  # wolf is a scanner nobody reads. This value signs nothing: there are no
+  # sessions or tokens in this service, it is never used outside test, and
+  # config/runtime.exs raises unless SECRET_KEY_BASE is set in production.
+  secret_key_base: "test_only_not_a_secret_test_only_not_a_secret_test_only_not_a_secret_",
   server: false
 
 # An account process that has been idle this long stops and gives its memory

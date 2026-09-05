@@ -24,7 +24,13 @@ config :clearing_ledger, Clearing.LedgerWeb.Endpoint,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "R4SJndKo3jNL18Rg0wVixtKynjMctYyLJQiCFLgsr4Nly1SPO+rWVdqXfUPadJ0T",
+  # Deliberately low-entropy and self-describing. Phoenix generates a random
+  # 64-byte value here, which a secret scanner cannot tell apart from a real
+  # leak -- so every run reports a finding, and a scanner that always cries
+  # wolf is a scanner nobody reads. This value signs nothing: there are no
+  # sessions or tokens in this service, it is never used outside dev, and
+  # config/runtime.exs raises unless SECRET_KEY_BASE is set in production.
+  secret_key_base: "dev_only_not_a_secret_dev_only_not_a_secret_dev_only_not_a_secret_",
   watchers: []
 
 # Do not include metadata nor timestamps in development logs
